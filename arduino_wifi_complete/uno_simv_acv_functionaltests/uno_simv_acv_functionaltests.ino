@@ -227,12 +227,12 @@ void loop()
 void simv_mode()
 {
   uint32_t cycleEndTime;
-  uint32_t cycleStartTime;
   bool firstRun = true;
   int breathsInitiated = 0;
   int breathsTotal = 0;
   float minuteVentilation;
   float breathPercent; 
+  uint32_t startTime;
   while (true)
   {
     // Fetch all potentiometer values
@@ -241,15 +241,17 @@ void simv_mode()
     // ==== Initiate the cycle =====
     if (firstRun)
     {
-      cycleStartTime = inspiration(TidVol);
+      inspiration(TidVol);
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
       firstRun = false;
+      startTime = millis();
+      
     }
     // ========= Identify trigger and initiate the cycle =============
     if (millis() - cycleEndTime >= (uint32_t)separation || maskPressure < -1)
     {
-      cycleStartTime = inspiration(TidVol);
+      inspiration(TidVol);
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
       breathsTotal = breathsTotal + 1;
@@ -264,7 +266,7 @@ void simv_mode()
     breathPercent = (breathsInitiated/breathsTotal)*100;
     
     // === Minute ventilation Calculation ===
-    minuteVentilation = (BPM*TidVol + breathsInitiated*TidVol)*1000*60/(cycleEndTime - cycleStartTime);
+    minuteVentilation = (BPM*TidVol + breathsInitiated*TidVol)*1000*60/(millis() - startTime);
 
     
     maskPressure = pressureFromAnalog(pinMask, 1000);
@@ -336,7 +338,7 @@ float average_maskPressure()
 // Inspiration Function
 // =======================
 float peakPressure;
-float inspiration(float TidVol)
+void inspiration(float TidVol)
 { int count = 0;
   totVolume = 0;
   timeNow = millis();
@@ -363,7 +365,7 @@ float inspiration(float TidVol)
     { peakPressure = maskPressure;
       }
   }
-  return timeNow;
+  return;
 }
 
 // =====================
