@@ -229,8 +229,7 @@ void simv_mode()
   uint32_t cycleEndTime;
   bool firstRun = true;
   int breathsInitiated = 0;
-  int breathsTotal = 0;
-  float minuteVentilation;
+  int seperationBreaths = 0;
   float breathPercent; 
   uint32_t startTime;
   while (true)
@@ -248,25 +247,30 @@ void simv_mode()
       startTime = millis();
       
     }
-    // ========= Identify trigger and initiate the cycle =============
-    if (millis() - cycleEndTime >= (uint32_t)separation || maskPressure < -1)
+
+    // ========= Triggered Breaths =============
+
+    if (maskPressure < -1)
+    { 
+      breathsInitiated = breathsInitiated + 1;
+      inspiration(TidVol);
+      delay(15);
+      cycleEndTime = expiration(TidVol, IE_ratio);
+    }
+   
+    // ========= Seperation Breaths =============
+   
+    if (millis() - cycleEndTime >= (uint32_t)separation)
     {
       inspiration(TidVol);
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
-      breathsTotal = breathsTotal + 1;
+      seperationBreaths = seperationBreaths + 1;
     }
-    
-    // === counting initiated breaths ===
-    if (maskPressure < -1)
-    { breathsInitiated = breathsInitiated + 1;
-      }
-    
+  
+
     // === % of breaths initiated ===
-    breathPercent = (breathsInitiated/breathsTotal)*100;
-    
-    // === Minute ventilation Calculation ===
-    minuteVentilation = (BPM*TidVol + breathsInitiated*TidVol)*1000*60/(millis() - startTime);
+    breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
 
     
     maskPressure = pressureFromAnalog(pinMask, 1000);
@@ -337,7 +341,10 @@ float average_maskPressure()
 // =======================
 // Inspiration Function
 // =======================
-float peakPressure;
+float peakPressure = 0;
+float peakFlow = 0;
+float calcVol = 0;
+float minuteVentilation = 0;
 void inspiration(float TidVol)
 { int count = 0;
   totVolume = 0;
@@ -352,6 +359,8 @@ void inspiration(float TidVol)
     maskPressure = pressureFromAnalog(pinMask, count);
     diffPressure = pressureFromAnalog(pinDiff, count);
     computePrintVolFlow();
+    calcVol = calcVol + totVolume;
+    minuteVentilation = calcVol/(millis()-timeNow)*1000*60;
     Serial.println(IE_ratio);
     //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
@@ -361,9 +370,9 @@ void inspiration(float TidVol)
     //nexLoop(nex_listen_list);
     count++;
     // === Calculating Peak inspiratory pressure====
-    if (peakPressure < maskPressure)
-    { peakPressure = maskPressure;
-      }
+    if (peakPressure < maskPressure)peakPressure = maskPressure;
+    // === Calculating Peak inspiratory flow====
+    if (peakFlow < volFlow)peakFlow = volFlow;  
   }
   return;
 }
