@@ -343,7 +343,6 @@ float average_maskPressure()
 // =======================
 float peakPressure = 0;
 float peakFlow = 0;
-float calcVol = 0;
 float minuteVentilation = 0;
 void inspiration(float TidVol)
 { int count = 0;
@@ -359,8 +358,7 @@ void inspiration(float TidVol)
     maskPressure = pressureFromAnalog(pinMask, count);
     diffPressure = pressureFromAnalog(pinDiff, count);
     computePrintVolFlow();
-    calcVol = calcVol + totVolume;
-    minuteVentilation = calcVol/(millis()-timeNow)*1000*60;
+    minuteVentilation = totVolume/(millis()-timeNow)*1000*60;
     Serial.println(IE_ratio);
     //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
@@ -370,9 +368,9 @@ void inspiration(float TidVol)
     //nexLoop(nex_listen_list);
     count++;
     // === Calculating Peak inspiratory pressure====
-    if (peakPressure < maskPressure)peakPressure = maskPressure;
+    if (peakPressure < maskPressure) peakPressure = maskPressure;
     // === Calculating Peak inspiratory flow====
-    if (peakFlow < volFlow)peakFlow = volFlow;  
+    if (peakFlow < volFlow) peakFlow = volFlow;  
   }
   return;
 }
