@@ -48,10 +48,15 @@ float maskPressureArr[90];
 float area_1 = 0.0002835287370;
 float area_2 = 0.00007853981634;
 float rho = 1.225;
-float totVolume;
 float timeNow;
+float peakPressure = 0;
+float peakFlow = 0;
+float minuteVentilation = 0;
+float cycleVolume;
+float totVolume = 0;
 String acvLabel = "acv";
 String simvLabel = "simv";
+
 
 // ======= Mode changing vars =========
 int state = HIGH;
@@ -273,6 +278,12 @@ void simv_mode()
     breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
 
     
+    // === minute ventilation ===
+    if((millis() - startTime)*1000 >= 60)
+    {
+      minuteVentilation = totVolume/(millis()-timeNow)*1000*60;
+      startTime = millis();
+      }
     maskPressure = pressureFromAnalog(pinMask, 1000);
     diffPressure = pressureFromAnalog(pinDiff, 1000);
     Serial.println(totVolume);
@@ -341,12 +352,9 @@ float average_maskPressure()
 // =======================
 // Inspiration Function
 // =======================
-float peakPressure = 0;
-float peakFlow = 0;
-float minuteVentilation = 0;
+
 void inspiration(float TidVol)
 { int count = 0;
-  totVolume = 0;
   timeNow = millis();
   for (pos = 0; pos <= TidVol; pos += 0.5) // goes from 0 degrees to 180 degrees
   { // in steps of 1 degree
@@ -358,7 +366,6 @@ void inspiration(float TidVol)
     maskPressure = pressureFromAnalog(pinMask, count);
     diffPressure = pressureFromAnalog(pinDiff, count);
     computePrintVolFlow();
-    minuteVentilation = totVolume/(millis()-timeNow)*1000*60;
     Serial.println(IE_ratio);
     //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
@@ -372,6 +379,7 @@ void inspiration(float TidVol)
     // === Calculating Peak inspiratory flow====
     if (peakFlow < volFlow) peakFlow = volFlow;  
   }
+  cycleVolume = totVolume;
   return;
 }
 
