@@ -173,32 +173,23 @@ void writeString(String stringData) {
 // ===========================================
 void loop()
 {
+fetchPotValues();
+send_to_screen_values();
+delay(500);
+nexLoop(nex_listen_list);
+if(set_mode == "SIMV" && start == 1)
+{
+  simv_mode();    
+}
+if(set_mode == "ACV" && start == 1)
+{
+  acv_mode();    
+}
 
 
-  BPM = 20;
-  IE_ratio = 2;
-  TidVol = 15;
-  maskPressure = 2;
-  volFlow = 4;
-  totVolume = 800;
-
-  transmit();
-  delay(3000);
-
-
-  /*     fetchPotValues();
-      send_to_screen_values();
-      delay(500);
-      nexLoop(nex_listen_list);
-      if(set_mode == "ACV" && start == 1)
-      {
-        Serial.println("I am here");
-        simv_mode();
-      }
-      Serial.println("I am not lost!!"); */
-  //acv_mode();
-  //Serial.println(set_mode);
-  //Serial.println(start);
+    //acv_mode();
+    //Serial.println(set_mode);
+    //Serial.println(start);
   //if(set_mode == "ACV" && start == true)
   //{
   //    acv_mode();
@@ -237,7 +228,7 @@ void simv_mode()
   int seperationBreaths = 0;
   float breathPercent; 
   uint32_t startTime;
-  while (true)
+  while(start == 1)
   {
     // Fetch all potentiometer values
     fetchPotValues();
@@ -285,15 +276,18 @@ void simv_mode()
       breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
       breathsInitiated = 0;
       seperationBreaths = 0;
-
+      
       // record minuteVentilation and breathPercent in sd card and wifi
       minuteVentilation = 0;
       startTime = millis();
       }
-    maskPressure = pressureFromAnalog(pinMask, 1000);
-    diffPressure = pressureFromAnalog(pinDiff, 1000);
-    Serial.println(totVolume);
- 
+
+      maskPressure = pressureFromAnalog(pinMask,1000);
+      diffPressure = pressureFromAnalog(pinDiff,1000); 
+      send_to_screen_values();
+      send_to_screen_graph();
+      nexLoop(nex_listen_list); 
+
   }
   return;
 }
@@ -309,7 +303,8 @@ void acv_mode()
   uint32_t cycleEndTime;
   bool firstRun = true;
 
-  while (true)
+
+  while(start == 1)
   {
     // Fetch all potentiometer values
     fetchPotValues();
@@ -330,9 +325,11 @@ void acv_mode()
       cycleEndTime = expiration(TidVol, IE_ratio);
     }
 
-    maskPressure = pressureFromAnalog(pinMask, 1000);
-    diffPressure = pressureFromAnalog(pinDiff, 1000);
-    Serial.println(IE_ratio);
+      maskPressure = pressureFromAnalog(pinMask,1000);
+      diffPressure = pressureFromAnalog(pinDiff,1000); 
+      send_to_screen_values();
+      send_to_screen_graph();
+      nexLoop(nex_listen_list); 
   }
   return;
 }
@@ -379,7 +376,9 @@ void inspiration(float TidVol)
     //myFile.println(data);
     //nexLoop(nex_listen_list);
     //send_to_screen_values();
-    //nexLoop(nex_listen_list);
+
+    //nexLoop(nex_listen_list); 
+    //send_to_screen_graph();
     count++;
     // === Calculating Peak inspiratory pressure====
     if (peakPressure < maskPressure) peakPressure = maskPressure;
@@ -413,6 +412,8 @@ uint32_t expiration(float TidVol, float IE_ratio)
     Serial.println(IE_ratio);
     //send_to_screen_values();
     //nexLoop(nex_listen_list);
+
+    //send_to_screen_graph();
     count++;
   }
   return millis();
