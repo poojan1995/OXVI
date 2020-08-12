@@ -259,6 +259,7 @@ void simv_mode()
     { 
       breathsInitiated = breathsInitiated + 1;
       inspiration(TidVol);
+      minuteVentilation += totVolume;
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
     }
@@ -268,20 +269,25 @@ void simv_mode()
     if (millis() - cycleEndTime >= (uint32_t)separation)
     {
       inspiration(TidVol);
+      minuteVentilation += totVolume;
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
       seperationBreaths = seperationBreaths + 1;
     }
   
-
-    // === % of breaths initiated ===
-    breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
-
-    
-    // === minute ventilation ===
+    // ======= Analytics Record every minute ==========
     if((millis() - startTime)*1000 >= 60)
     {
-      minuteVentilation = totVolume/(millis()-timeNow)*1000*60;
+      // === minute ventilation ===
+      minuteVentilation = minuteVentilation/(millis()-startTime)*1000*60;
+
+      // === % of breaths initiated ===
+      breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
+      breathsInitiated = 0;
+      seperationBreaths = 0;
+
+      // record minuteVentilation and breathPercent in sd card and wifi
+      minuteVentilation = 0;
       startTime = millis();
       }
     maskPressure = pressureFromAnalog(pinMask, 1000);
@@ -356,6 +362,7 @@ float average_maskPressure()
 void inspiration(float TidVol)
 { int count = 0;
   timeNow = millis();
+  totVolume= 0;
   for (pos = 0; pos <= TidVol; pos += 0.5) // goes from 0 degrees to 180 degrees
   { // in steps of 1 degree
 
