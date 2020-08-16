@@ -24,6 +24,7 @@ int pinDiff = 3;
 int ledState = LOW;
 
 
+
 // ==== Digital Pins =====
 const int buzzerPin = 5;
 const int ledPin = 6;
@@ -214,19 +215,97 @@ if(set_mode == "ACV" && start == 1)
     } */
 
 }
+
+
 // ***************** END RUN RESPIRATOR  *******************
 
 // ============ LAYER 1 FUNCTIONS ===============
+
 // =================================================
 //                 SIMV MODE Function
 // =================================================
+
 void simv_mode()
 {
   uint32_t cycleEndTime;
   bool firstRun = true;
   int breathsInitiated = 0;
   int seperationBreaths = 0;
-  float breathPercent; 
+  float breathPercent = 0; 
+  uint32_t startTime;
+  while(start == 1)
+  {
+    // Fetch all potentiometer values
+    fetchPotValues();
+
+    // ==== Initiate the cycle =====
+    if (firstRun)
+    {
+      inspiration(TidVol);
+      delay(15);
+      cycleEndTime = expiration(TidVol, IE_ratio);
+      firstRun = false;
+      startTime = millis();
+      
+    }
+
+    // ========= Triggered Breaths =============
+
+    if (maskPressure < -1)
+    { 
+      breathsInitiated = breathsInitiated + 1;
+      cycleEndTime = millis() + 1000*60/BPM; //average breath duration;
+    }
+   
+    // ========= Seperation Breaths =============
+   
+    if (millis() - cycleEndTime >= (uint32_t)separation)
+    {
+      inspiration(TidVol);
+      minuteVentilation += totVolume;
+      delay(15);
+      cycleEndTime = expiration(TidVol, IE_ratio);
+      seperationBreaths = seperationBreaths + 1;
+    }
+  
+    // ======= Analytics Record every minute ==========
+    if((millis() - startTime)*1000 >= 60)
+    {
+      // === minute ventilation ===
+      minuteVentilation = minuteVentilation/(millis()-startTime)*1000*60;
+
+      // === % of breaths initiated ===
+      breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
+      breathsInitiated = 0;
+      seperationBreaths = 0;
+      
+      // record minuteVentilation and breathPercent in sd card and wifi
+      minuteVentilation = 0;
+      startTime = millis();
+      }
+
+      maskPressure = pressureFromAnalog(pinMask,1000);
+      diffPressure = pressureFromAnalog(pinDiff,1000); 
+      send_to_screen_values();
+      send_to_screen_graph();
+      nexLoop(nex_listen_list); 
+
+  }
+  return;
+}
+
+
+// =================================================
+//                 PSV MODE Function
+// =================================================
+
+void psv_mode() // convert everything to a pressure control way
+{
+  uint32_t cycleEndTime;
+  bool firstRun = true;
+  int breathsInitiated = 0;
+  int seperationBreaths = 0;
+  float breathPercent = 0; 
   uint32_t startTime;
   while(start == 1)
   {
@@ -292,8 +371,6 @@ void simv_mode()
   return;
 }
 
-
-
 // ===========================================
 //            ACV MODE Function
 // ===========================================
@@ -302,8 +379,10 @@ void acv_mode()
 {
   uint32_t cycleEndTime;
   bool firstRun = true;
-
-
+  int breathsInitiated = 0;
+  int seperationBreaths = 0;
+  float breathPercent = 0; 
+  uint32_t startTime;
   while(start == 1)
   {
     // Fetch all potentiometer values
@@ -316,20 +395,54 @@ void acv_mode()
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
       firstRun = false;
+      startTime = millis();
+      
     }
-    // ========= Identify trigger and initiate the cycle =============
-    if (millis() - cycleEndTime >= (uint32_t)separation || maskPressure < -1)
-    {
+
+    // ========= Triggered Breaths =============
+
+    if (maskPressure < -1)
+    { 
+      breathsInitiated = breathsInitiated + 1;
       inspiration(TidVol);
+      minuteVentilation += totVolume;
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
     }
+   
+    // ========= Seperation Breaths =============
+   
+    if (millis() - cycleEndTime >= (uint32_t)separation)
+    {
+      inspiration(TidVol);
+      minuteVentilation += totVolume;
+      delay(15);
+      cycleEndTime = expiration(TidVol, IE_ratio);
+      seperationBreaths = seperationBreaths + 1;
+    }
+  
+    // ======= Analytics Record every minute ==========
+    if((millis() - startTime)*1000 >= 60)
+    {
+      // === minute ventilation ===
+      minuteVentilation = minuteVentilation/(millis()-startTime)*1000*60;
+
+      // === % of breaths initiated ===
+      breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
+      breathsInitiated = 0;
+      seperationBreaths = 0;
+      
+      // record minuteVentilation and breathPercent in sd card and wifi
+      minuteVentilation = 0;
+      startTime = millis();
+      }
 
       maskPressure = pressureFromAnalog(pinMask,1000);
       diffPressure = pressureFromAnalog(pinDiff,1000); 
       send_to_screen_values();
       send_to_screen_graph();
       nexLoop(nex_listen_list); 
+
   }
   return;
 }
@@ -439,6 +552,24 @@ void fetchPotValues()
 
 
 // ================= LAYER 3 FUNCTIONS =============
+
+// =============================
+// Calibration Function
+// =============================
+void diffSensnorCalibration()
+
+{ 
+  pressure = pressureFromAnalog(pinDiff,1000); 
+
+  while(pressure < -10 && pressure > 10)
+  {
+      if(pressure > 10){constPressureDiff += 1;}
+      if(pressure < -10){constPressureDiff -= 1;}
+      pressure = pressureFromAnalog(pinDiff,1000); 
+    }
+    return;
+  } 
+
 // =============================
 // Pressure from Analog Function
 // =============================
