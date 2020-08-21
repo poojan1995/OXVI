@@ -31,7 +31,7 @@ const int ledPin = 6;
 // ==== Sensor Offset =====
 float constPressureMask = 512 + 24.1;
 float slopePressureMask = 204.8;
-float constPressureDiff = 512 + 21;
+float constPressureDiff = 512 + 23;
 float slopePressureDiff = 204.8;
 
 // ===== Other vars ======
@@ -173,18 +173,21 @@ void writeString(String stringData) {
 // ===========================================
 void loop()
 {
-fetchPotValues();
-send_to_screen_values();
-delay(500);
-nexLoop(nex_listen_list);
-if(set_mode == "SIMV" && start == 1)
-{
-  simv_mode();    
-}
-if(set_mode == "ACV" && start == 1)
-{
-  acv_mode();    
-}
+  start= 1;
+
+acv_mode_photoshoot();
+//fetchPotValues();
+//send_to_screen_values();
+//delay(500);
+//nexLoop(nex_listen_list);
+//if(set_mode == "SIMV" && start == 1)
+//{
+//  simv_mode();    
+//}
+//if(set_mode == "ACV" && start == 1)
+//{
+//  acv_mode();    
+//}
 
 
     //acv_mode();
@@ -284,6 +287,7 @@ void simv_mode()
 
       maskPressure = pressureFromAnalog(pinMask,1000);
       diffPressure = pressureFromAnalog(pinDiff,1000); 
+      Serial.println(diffPressure);
       send_to_screen_values();
       send_to_screen_graph();
       nexLoop(nex_listen_list); 
@@ -308,6 +312,7 @@ void acv_mode()
   {
     // Fetch all potentiometer values
     fetchPotValues();
+    diffSensnorCalibration();
 
     // ==== Initiate the cycle =====
     if (firstRun)
@@ -327,7 +332,46 @@ void acv_mode()
 
       maskPressure = pressureFromAnalog(pinMask,1000);
       diffPressure = pressureFromAnalog(pinDiff,1000); 
-      send_to_screen_values();
+      //send_to_screen_values();
+      send_to_screen_graph();
+      nexLoop(nex_listen_list); 
+  }
+  return;
+}
+
+void acv_mode_photoshoot()
+{
+  uint32_t cycleEndTime;
+  bool firstRun = true;
+
+
+  while(true)
+  {
+    // Fetch all potentiometer values
+    fetchPotValues();
+    diffSensnorCalibration();
+
+    // ==== Initiate the cycle =====
+    if (firstRun)
+    {
+      inspiration(TidVol);
+      delay(15);
+      cycleEndTime = expiration(TidVol, IE_ratio);
+      delay(400);
+      firstRun = false;
+    }
+    // ========= Identify trigger and initiate the cycle =============
+    if (millis() - cycleEndTime >= (uint32_t)separation || maskPressure < -1)
+    {
+      inspiration(TidVol);
+      delay(15);
+      cycleEndTime = expiration(TidVol, IE_ratio);
+      delay(400);
+    }
+
+      maskPressure = pressureFromAnalog(pinMask,1000);
+      diffPressure = pressureFromAnalog(pinDiff,1000); 
+      //send_to_screen_values();
       send_to_screen_graph();
       nexLoop(nex_listen_list); 
   }
@@ -355,30 +399,29 @@ float average_maskPressure()
 // =======================
 // Inspiration Function
 // =======================
-
+ 
 void inspiration(float TidVol)
 { int count = 0;
   timeNow = millis();
   totVolume= 0;
-  for (pos = 0; pos <= TidVol; pos += 0.5) // goes from 0 degrees to 180 degrees
+  for (pos = 0; pos <= TidVol; pos += 2) // goes from 0 degrees to 180 degrees
   { // in steps of 1 degree
 
-    servo.write(pos + 1.5);
-    delay(1000 / TidVol);
+    servo.write(pos);
+    delay(10);
 
     // ============ Update pressure values =========
     maskPressure = pressureFromAnalog(pinMask, count);
     diffPressure = pressureFromAnalog(pinDiff, count);
     computePrintVolFlow();
-    Serial.println(IE_ratio);
     //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
     //myFile.println(data);
     //nexLoop(nex_listen_list);
     //send_to_screen_values();
-
     //nexLoop(nex_listen_list); 
-    //send_to_screen_graph();
+    send_to_screen_graph();
+    
     count++;
     // === Calculating Peak inspiratory pressure====
     if (peakPressure < maskPressure) peakPressure = maskPressure;
@@ -394,7 +437,7 @@ void inspiration(float TidVol)
 // =====================
 
 uint32_t expiration(float TidVol, float IE_ratio)
-{
+ {
   int count = 0;
   totVolume = 0;
   timeNow = millis();
@@ -409,11 +452,9 @@ uint32_t expiration(float TidVol, float IE_ratio)
     //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
     //myFile.println(data);
-    Serial.println(IE_ratio);
     //send_to_screen_values();
     //nexLoop(nex_listen_list);
-
-    //send_to_screen_graph();
+    send_to_screen_graph();
     count++;
   }
   return millis();
@@ -439,6 +480,26 @@ void fetchPotValues()
 
 
 // ================= LAYER 3 FUNCTIONS =============
+
+// =============================
+// Calibration Function
+// =============================
+void diffSensnorCalibration()
+
+{ 
+  
+  diffPressure = pressureFromAnalog(pinDiff,1000); 
+
+  while(diffPressure < -10 || diffPressure > 10)
+  { 
+      if(diffPressure > 10){constPressureDiff += 1;}
+      if(diffPressure < -10){constPressureDiff -= 1;}
+      diffPressure = pressureFromAnalog(pinDiff,1000); 
+    }
+    return;
+} 
+
+
 // =============================
 // Pressure from Analog Function
 // =============================
@@ -535,7 +596,7 @@ void computePrintVolFlow()
   }
   if (volFlow > 0.4)totVolume = totVolume + volFlow * (millis() - timeNow);
   timeNow = millis();
-  //Serial.println(totVolume);
+  //Serial.println(maskPressure);
 }
 // =======================
 // Nextion Screen Functions
@@ -615,11 +676,11 @@ void transmit() {
 // =====================
 
 void send_to_screen_graph() {
-  String to_send_p_mask = ad + id_1 + "," + ch + "," + int(maskPressure);
+  String to_send_p_mask = ad + id_1 + "," + ch + "," + int(maskPressure*20);
   print_screen(to_send_p_mask);
-  String to_send_volFlow = ad + id_2 + "," + ch + "," + int(volFlow);
+  String to_send_volFlow = ad + id_2 + "," + ch + "," + int(volFlow*100);
   print_screen(to_send_volFlow);
-  String to_send_totVolume = ad + id_3 + "," + ch + "," + int(totVolume);
+  String to_send_totVolume = ad + id_3 + "," + ch + "," + int(map(totVolume, -50 , 1000, 0, 255));
   print_screen(to_send_totVolume);
 }
 
