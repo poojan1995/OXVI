@@ -41,6 +41,7 @@ float TidVol;
 float BPM;
 float separation;
 float sensorvalue;
+float pressure;
 float maskPressure;
 float diffPressure;
 float volFlow;
@@ -180,11 +181,11 @@ delay(500);
 nexLoop(nex_listen_list);
 if(set_mode == "SIMV" && start == 1)
 {
-  simv_mode();    
+  simv_mode();
 }
 if(set_mode == "ACV" && start == 1)
 {
-  acv_mode();    
+  acv_mode();
 }
 
 
@@ -231,7 +232,7 @@ void simv_mode()
   bool firstRun = true;
   int breathsInitiated = 0;
   int seperationBreaths = 0;
-  float breathPercent = 0; 
+  float breathPercent = 0;
   uint32_t startTime;
   while(start == 1)
   {
@@ -246,19 +247,19 @@ void simv_mode()
       cycleEndTime = expiration(TidVol, IE_ratio);
       firstRun = false;
       startTime = millis();
-      
+
     }
 
     // ========= Triggered Breaths =============
 
     if (maskPressure < -1)
-    { 
+    {
       breathsInitiated = breathsInitiated + 1;
       cycleEndTime = millis() + 1000*60/BPM; //average breath duration;
     }
-   
+
     // ========= Seperation Breaths =============
-   
+
     if (millis() - cycleEndTime >= (uint32_t)separation)
     {
       inspiration(TidVol);
@@ -267,7 +268,7 @@ void simv_mode()
       cycleEndTime = expiration(TidVol, IE_ratio);
       seperationBreaths = seperationBreaths + 1;
     }
-  
+
     // ======= Analytics Record every minute ==========
     if((millis() - startTime)*1000 >= 60)
     {
@@ -278,17 +279,17 @@ void simv_mode()
       breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
       breathsInitiated = 0;
       seperationBreaths = 0;
-      
+
       // record minuteVentilation and breathPercent in sd card and wifi
       minuteVentilation = 0;
       startTime = millis();
       }
 
       maskPressure = pressureFromAnalog(pinMask,1000);
-      diffPressure = pressureFromAnalog(pinDiff,1000); 
+      diffPressure = pressureFromAnalog(pinDiff,1000);
       send_to_screen_values();
       send_to_screen_graph();
-      nexLoop(nex_listen_list); 
+      nexLoop(nex_listen_list);
 
   }
   return;
@@ -305,7 +306,7 @@ void psv_mode() // convert everything to a pressure control way
   bool firstRun = true;
   int breathsInitiated = 0;
   int seperationBreaths = 0;
-  float breathPercent = 0; 
+  float breathPercent = 0;
   uint32_t startTime;
   while(start == 1)
   {
@@ -315,27 +316,27 @@ void psv_mode() // convert everything to a pressure control way
     // ==== Initiate the cycle =====
     if (firstRun)
     {
-      inspiration(TidVol);
+      inspiration_psv(pressure);
       delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      cycleEndTime = expiration_psv(TidVol, IE_ratio);
       firstRun = false;
       startTime = millis();
-      
+
     }
 
     // ========= Triggered Breaths =============
 
     if (maskPressure < -1)
-    { 
+    {
       breathsInitiated = breathsInitiated + 1;
-      inspiration(TidVol);
+      inspiration_psv(TidVol);
       minuteVentilation += totVolume;
       delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      cycleEndTime = expiration_psv(TidVol, IE_ratio);
     }
-   
+
     // ========= Seperation Breaths =============
-   
+
     if (millis() - cycleEndTime >= (uint32_t)separation)
     {
       inspiration(TidVol);
@@ -344,7 +345,7 @@ void psv_mode() // convert everything to a pressure control way
       cycleEndTime = expiration(TidVol, IE_ratio);
       seperationBreaths = seperationBreaths + 1;
     }
-  
+
     // ======= Analytics Record every minute ==========
     if((millis() - startTime)*1000 >= 60)
     {
@@ -355,17 +356,17 @@ void psv_mode() // convert everything to a pressure control way
       breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
       breathsInitiated = 0;
       seperationBreaths = 0;
-      
+
       // record minuteVentilation and breathPercent in sd card and wifi
       minuteVentilation = 0;
       startTime = millis();
       }
 
       maskPressure = pressureFromAnalog(pinMask,1000);
-      diffPressure = pressureFromAnalog(pinDiff,1000); 
+      diffPressure = pressureFromAnalog(pinDiff,1000);
       send_to_screen_values();
       send_to_screen_graph();
-      nexLoop(nex_listen_list); 
+      nexLoop(nex_listen_list);
 
   }
   return;
@@ -381,7 +382,7 @@ void acv_mode()
   bool firstRun = true;
   int breathsInitiated = 0;
   int seperationBreaths = 0;
-  float breathPercent = 0; 
+  float breathPercent = 0;
   uint32_t startTime;
   while(start == 1)
   {
@@ -396,22 +397,22 @@ void acv_mode()
       cycleEndTime = expiration(TidVol, IE_ratio);
       firstRun = false;
       startTime = millis();
-      
+
     }
 
     // ========= Triggered Breaths =============
 
     if (maskPressure < -1)
-    { 
+    {
       breathsInitiated = breathsInitiated + 1;
       inspiration(TidVol);
       minuteVentilation += totVolume;
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
     }
-   
+
     // ========= Seperation Breaths =============
-   
+
     if (millis() - cycleEndTime >= (uint32_t)separation)
     {
       inspiration(TidVol);
@@ -420,7 +421,7 @@ void acv_mode()
       cycleEndTime = expiration(TidVol, IE_ratio);
       seperationBreaths = seperationBreaths + 1;
     }
-  
+
     // ======= Analytics Record every minute ==========
     if((millis() - startTime)*1000 >= 60)
     {
@@ -431,17 +432,17 @@ void acv_mode()
       breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
       breathsInitiated = 0;
       seperationBreaths = 0;
-      
+
       // record minuteVentilation and breathPercent in sd card and wifi
       minuteVentilation = 0;
       startTime = millis();
       }
 
       maskPressure = pressureFromAnalog(pinMask,1000);
-      diffPressure = pressureFromAnalog(pinDiff,1000); 
+      diffPressure = pressureFromAnalog(pinDiff,1000);
       send_to_screen_values();
       send_to_screen_graph();
-      nexLoop(nex_listen_list); 
+      nexLoop(nex_listen_list);
 
   }
   return;
@@ -466,7 +467,24 @@ float average_maskPressure()
 
 
 // =======================
-// Inspiration Function
+// Inspiration Function for pressure control
+// =======================
+
+void inspiration_psv(float Pressure)
+{
+
+}
+
+// =======================
+// Inspiration Function for volume control
+// =======================
+void expiration_psv()
+{
+
+}
+
+// =======================
+// Inspiration Function for volume control
 // =======================
 
 void inspiration(float TidVol)
@@ -475,6 +493,7 @@ void inspiration(float TidVol)
   totVolume= 0;
   for (pos = 0; pos <= TidVol; pos += 0.5) // goes from 0 degrees to 180 degrees
   { // in steps of 1 degree
+
 
     servo.write(pos + 1.5);
     delay(1000 / TidVol);
@@ -490,20 +509,20 @@ void inspiration(float TidVol)
     //nexLoop(nex_listen_list);
     //send_to_screen_values();
 
-    //nexLoop(nex_listen_list); 
+    //nexLoop(nex_listen_list);
     //send_to_screen_graph();
     count++;
     // === Calculating Peak inspiratory pressure====
     if (peakPressure < maskPressure) peakPressure = maskPressure;
     // === Calculating Peak inspiratory flow====
-    if (peakFlow < volFlow) peakFlow = volFlow;  
+    if (peakFlow < volFlow) peakFlow = volFlow;
   }
   cycleVolume = totVolume;
   return;
 }
 
 // =====================
-// Expiration Function
+// Expiration Function for volume control
 // =====================
 
 uint32_t expiration(float TidVol, float IE_ratio)
@@ -558,28 +577,28 @@ void fetchPotValues()
 // =============================
 void diffSensnorCalibration()
 
-{ 
-  pressure = pressureFromAnalog(pinDiff,1000); 
+{
+  pressure = pressureFromAnalog(pinDiff,1000);
 
   while(pressure < -10 && pressure > 10)
   {
       if(pressure > 10){constPressureDiff += 1;}
       if(pressure < -10){constPressureDiff -= 1;}
-      pressure = pressureFromAnalog(pinDiff,1000); 
+      pressure = pressureFromAnalog(pinDiff,1000);
     }
     return;
-  } 
+  }
 
 
 
 
-  
+
 
 // =============================
 // Pressure from Analog Function
 // =============================
 float pressureFromAnalog(int pin, int count)
-{ float pressure;
+{
   pressure = analogRead(pin);
   // Differential pressure sensor - output Pascal
   if (pin == pinDiff)
