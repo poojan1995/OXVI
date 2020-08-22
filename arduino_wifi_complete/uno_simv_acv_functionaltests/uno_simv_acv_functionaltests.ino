@@ -173,21 +173,19 @@ void writeString(String stringData) {
 // ===========================================
 void loop()
 {
-  start= 1;
 
-acv_mode_photoshoot();
-//fetchPotValues();
-//send_to_screen_values();
-//delay(500);
-//nexLoop(nex_listen_list);
+fetchPotValues();
+send_to_screen_values();
+delay(500);
+nexLoop(nex_listen_list);
 //if(set_mode == "SIMV" && start == 1)
 //{
 //  simv_mode();    
 //}
-//if(set_mode == "ACV" && start == 1)
-//{
-//  acv_mode();    
-//}
+if(set_mode == "ACV" && start == 1)
+{
+  acv_mode_photoshoot();    
+}
 
 
     //acv_mode();
@@ -333,7 +331,7 @@ void acv_mode()
       maskPressure = pressureFromAnalog(pinMask,1000);
       diffPressure = pressureFromAnalog(pinDiff,1000); 
       //send_to_screen_values();
-      send_to_screen_graph();
+      //send_to_screen_graph();
       nexLoop(nex_listen_list); 
   }
   return;
@@ -345,7 +343,7 @@ void acv_mode_photoshoot()
   bool firstRun = true;
 
 
-  while(true)
+  while(start == 1)
   {
     // Fetch all potentiometer values
     fetchPotValues();
@@ -357,7 +355,6 @@ void acv_mode_photoshoot()
       inspiration(TidVol);
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
-      delay(400);
       firstRun = false;
     }
     // ========= Identify trigger and initiate the cycle =============
@@ -366,13 +363,12 @@ void acv_mode_photoshoot()
       inspiration(TidVol);
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
-      delay(400);
     }
 
       maskPressure = pressureFromAnalog(pinMask,1000);
       diffPressure = pressureFromAnalog(pinDiff,1000); 
       //send_to_screen_values();
-      send_to_screen_graph();
+      //send_to_screen_graph();
       nexLoop(nex_listen_list); 
   }
   return;
@@ -674,13 +670,38 @@ void transmit() {
 // =====================
 // Print to Screen
 // =====================
-
+float i = 0;
+float j;
+float val1;
+float val2;
+float val3;
 void send_to_screen_graph() {
-  String to_send_p_mask = ad + id_1 + "," + ch + "," + int(maskPressure*20);
+  i= i + 0.05;
+  if(i>6.28) i = 0;
+  if (i > 2 && i <4.5)
+    {
+      val1 = 40 + 5*i + random(-2,2);
+      val3 = 70 - 7*i + random(-2,2);
+    }
+  if (i >=4.5 && i <5)
+  {
+    val3 =  5 + 4*i + random(-2,2);
+  }
+    if (i<=2 || i>=5)
+    {
+      val1 = 15 + random(-2,2);
+      val3 = 32 + random(-4,2);
+    }
+  if (i < 3.14)
+  {val2 = sin(i/2);}
+  else {val2 = (sin((3.14+i)/2)+1);}
+    
+  String to_send_p_mask = ad + id_1 + "," + ch + "," + int(val1);
+  //Serial.println(val2);
   print_screen(to_send_p_mask);
-  String to_send_volFlow = ad + id_2 + "," + ch + "," + int(volFlow*100);
+  String to_send_volFlow = ad + id_2 + "," + ch + "," + int(40*(val2+0.5) + random(-1.1,1.1));
   print_screen(to_send_volFlow);
-  String to_send_totVolume = ad + id_3 + "," + ch + "," + int(map(totVolume, -50 , 1000, 0, 255));
+  String to_send_totVolume = ad + id_3 + "," + ch + "," + int(val3);
   print_screen(to_send_totVolume);
 }
 
