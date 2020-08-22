@@ -357,7 +357,6 @@ void acv_mode_photoshoot()
       inspiration(TidVol);
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
-      delay(400);
       firstRun = false;
     }
     // ========= Identify trigger and initiate the cycle =============
@@ -366,7 +365,6 @@ void acv_mode_photoshoot()
       inspiration(TidVol);
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
-      delay(400);
     }
 
       maskPressure = pressureFromAnalog(pinMask,1000);
@@ -467,7 +465,7 @@ void fetchPotValues()
 {
   // Fetch all potentiometer values
   IE_ratio = map(analogRead(potpinIE_ratio), 0, 1023, 1.00, 4.00);
-  TidVol = map(analogRead(potpinTidVol), 0, 1023, 40.00, 120.00);
+  TidVol = map(analogRead(potpinTidVol), 0, 1023, 40.00, 160.00);
   BPM = map(analogRead(potpinBPM), 0, 1023, 8.00, 30.00);
   separation = 1000 * (60 / BPM - (1 + IE_ratio)); // convert to milliseconds
   // Correct separation time if needed
