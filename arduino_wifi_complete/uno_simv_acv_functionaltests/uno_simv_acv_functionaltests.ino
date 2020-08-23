@@ -322,7 +322,7 @@ void psv_mode()
     // ==== Initiate the cycle =====
     if (firstRun)
     {
-      inspiration_psv(input_pressure); //using seperate function for psv inspiration
+      inspiration_psv(input_pressure); //using seperate function for psv inspiration taking hypothetical input as input_pressure
       delay(15);
       cycleEndTime = expiration_psv(TidVol, IE_ratio);
       firstRun = false;
