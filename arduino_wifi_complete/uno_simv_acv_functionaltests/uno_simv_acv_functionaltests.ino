@@ -306,7 +306,7 @@ void simv_mode()
 //                 PSV MODE Function
 // =================================================
 
-void psv_mode() // convert everything to a pressure control way
+void psv_mode()
 {
   uint32_t cycleEndTime;
   bool firstRun = true;
@@ -322,7 +322,7 @@ void psv_mode() // convert everything to a pressure control way
     // ==== Initiate the cycle =====
     if (firstRun)
     {
-      inspiration_psv(input_pressure);
+      inspiration_psv(input_pressure); //using seperate function for psv inspiration
       delay(15);
       cycleEndTime = expiration_psv(TidVol, IE_ratio);
       firstRun = false;
@@ -344,9 +344,9 @@ void psv_mode() // convert everything to a pressure control way
 
     if (millis() - cycleEndTime >= (uint32_t)separation)
     {
-      inspiration(TidVol);
+      inspiration_psv(input_pressure);
       delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      cycleEndTime = expiration_psv(TidVol, IE_ratio);
       seperationBreaths = seperationBreaths + 1;
     }
 
@@ -470,7 +470,7 @@ void inspiration_psv(float input_pressure)
   timeNow = millis();
   totVolume= 0;
   pos = 0;
-  while(maskPressure <= input_pressure) // goes from 0 degrees to 180 degrees
+  while(maskPressure <= input_pressure) // increasing maskPressure to the input pressure
   { // in steps of 1 degree
 
     pos += 0.5;
@@ -503,7 +503,7 @@ uint32_t expiration_psv(float TidVol, float IE_ratio)
 int count = 0;
 totVolume = 0;
 timeNow = millis();
-while (maskPressure < -10 && maskPressure > 10)
+while (maskPressure < -10 && maskPressure > 10) // decreasing maskPressure to 0
 {
   pos -= 0.5;
   servo.write(pos - 1.5);
