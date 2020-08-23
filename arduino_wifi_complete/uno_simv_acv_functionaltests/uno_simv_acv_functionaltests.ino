@@ -42,6 +42,7 @@ float BPM;
 float separation;
 float sensorvalue;
 float pressure;
+float input_pressure;
 float maskPressure;
 float diffPressure;
 float volFlow;
@@ -188,6 +189,11 @@ if(set_mode == "ACV" && start == 1)
   acv_mode();
 }
 
+if(set_mode == "PSV" && start == 1)
+{
+  psv_mode();
+}
+
 
     //acv_mode();
     //Serial.println(set_mode);
@@ -316,7 +322,7 @@ void psv_mode() // convert everything to a pressure control way
     // ==== Initiate the cycle =====
     if (firstRun)
     {
-      inspiration_psv(pressure);
+      inspiration_psv(input_pressure);
       delay(15);
       cycleEndTime = expiration_psv(TidVol, IE_ratio);
       firstRun = false;
@@ -329,8 +335,7 @@ void psv_mode() // convert everything to a pressure control way
     if (maskPressure < -1)
     {
       breathsInitiated = breathsInitiated + 1;
-      inspiration_psv(TidVol);
-      minuteVentilation += totVolume;
+      inspiration_psv(input_pressure);
       delay(15);
       cycleEndTime = expiration_psv(TidVol, IE_ratio);
     }
@@ -340,17 +345,10 @@ void psv_mode() // convert everything to a pressure control way
     if (millis() - cycleEndTime >= (uint32_t)separation)
     {
       inspiration(TidVol);
-      minuteVentilation += totVolume;
       delay(15);
       cycleEndTime = expiration(TidVol, IE_ratio);
       seperationBreaths = seperationBreaths + 1;
     }
-
-    // ======= Analytics Record every minute ==========
-    if((millis() - startTime)*1000 >= 60)
-    {
-      // === minute ventilation ===
-      minuteVentilation = minuteVentilation/(millis()-startTime)*1000*60;
 
       // === % of breaths initiated ===
       breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
@@ -358,7 +356,6 @@ void psv_mode() // convert everything to a pressure control way
       seperationBreaths = 0;
 
       // record minuteVentilation and breathPercent in sd card and wifi
-      minuteVentilation = 0;
       startTime = millis();
       }
 
@@ -367,8 +364,6 @@ void psv_mode() // convert everything to a pressure control way
       send_to_screen_values();
       send_to_screen_graph();
       nexLoop(nex_listen_list);
-
-  }
   return;
 }
 
@@ -470,16 +465,64 @@ float average_maskPressure()
 // Inspiration Function for pressure control
 // =======================
 
-void inspiration_psv(float Pressure)
-{
+void inspiration_psv(float input_pressure)
+{ int count = 0;
+  timeNow = millis();
+  totVolume= 0;
+  pos = 0;
+  while(maskPressure <= input_pressure) // goes from 0 degrees to 180 degrees
+  { // in steps of 1 degree
 
+    pos += 0.5;
+    servo.write(pos + 1.5);
+    delay(1000 / TidVol);
+
+    // ============ Update pressure values =========
+    maskPressure = pressureFromAnalog(pinMask, count);
+    diffPressure = pressureFromAnalog(pinDiff, count);
+    computePrintVolFlow();
+    Serial.println(IE_ratio);
+    //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
+    //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
+    //myFile.println(data);
+    //nexLoop(nex_listen_list);
+    //send_to_screen_values();
+
+    //nexLoop(nex_listen_list);
+    //send_to_screen_graph();
+    count++;
+  }
+  return;
 }
 
 // =======================
 // Inspiration Function for volume control
 // =======================
-void expiration_psv()
+uint32_t expiration_psv(float TidVol, float IE_ratio)
 {
+int count = 0;
+totVolume = 0;
+timeNow = millis();
+while (maskPressure < -10 && maskPressure > 10)
+{
+  pos -= 0.5;
+  servo.write(pos - 1.5);
+  delay(1000 * IE_ratio / TidVol);
+  // ============ Update pressure values =========
+  maskPressure = pressureFromAnalog(pinMask, count);
+  diffPressure = pressureFromAnalog(pinDiff, count);
+  //computePrintVolFlow();
+  //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
+  //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
+  //myFile.println(data);
+  Serial.println(IE_ratio);
+  //send_to_screen_values();
+  //nexLoop(nex_listen_list);
+
+  //send_to_screen_graph();
+  count++;
+}
+return millis();
 
 }
 
