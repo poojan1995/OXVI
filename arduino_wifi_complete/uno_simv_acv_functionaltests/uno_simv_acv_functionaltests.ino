@@ -59,6 +59,8 @@ float cycleVolume;
 float totVolume = 0;
 String acvLabel = "acv";
 String simvLabel = "simv";
+uint32_t inspirationTime;
+uint32_t expirationTime;
 
 
 // ======= Mode changing vars =========
@@ -261,7 +263,8 @@ void simv_mode()
     if (maskPressure < -1)
     {
       breathsInitiated = breathsInitiated + 1;
-      cycleEndTime = millis() + 1000*60/BPM; //average breath duration;
+      //taking average breath duration as the last breath duration
+      cycleEndTime = millis() + inspirationTime + expirationTime;
     }
 
     // ========= Seperation Breaths =============
@@ -560,6 +563,7 @@ void inspiration(float TidVol)
     // === Calculating Peak inspiratory flow====
     if (peakFlow < volFlow) peakFlow = volFlow;
   }
+  inspirationTime = millis() - timeNow;
   cycleVolume = totVolume;
   return;
 }
@@ -591,6 +595,7 @@ uint32_t expiration(float TidVol, float IE_ratio)
     //send_to_screen_graph();
     count++;
   }
+  expirationTime = millis() - timeNow;
   return millis();
 }
 
