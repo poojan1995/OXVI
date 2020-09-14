@@ -9,7 +9,8 @@
                 "/Applications/Arduino.app/Contents/Java/hardware/arduino/avr/**",
                 "/Users/poojan/anaconda/include/c++/v1",
                 "C:\\Users\\Ranjith\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.6.3\\**",
-                "C:\\Users\\Ranjith\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**"
+                "C:\\Users\\Ranjith\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
+                "/Users/poojan/Library/Arduino15/packages/esp8266/hardware/esp8266/2.5.1/**"
             ],
             "forcedInclude": [
                 "/Applications/Arduino.app/Contents/Java/hardware/arduino/avr/cores/arduino/Arduino.h"
