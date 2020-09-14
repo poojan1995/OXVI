@@ -7,6 +7,7 @@
 #include <Nextion.h>
 #include <SPI.h>
 #include <SD.h>
+#include<Arduino.h>
 
 //====== Serial Connection with NODEMCU =====
 SoftwareSerial SUART(2, 3); //SRX=Dpin-2; STX-DPin-3
