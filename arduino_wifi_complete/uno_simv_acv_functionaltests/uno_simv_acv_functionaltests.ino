@@ -23,7 +23,7 @@ int potpinBPM = 2;
 int pinMask = 4;
 int pinDiff = 3;
 int ledState = LOW;
-// change from poojan
+// change from dhruv
 
 // ==== Digital Pins =====
 const int buzzerPin = 5;
