@@ -23,7 +23,7 @@ int potpinBPM = 2;
 int pinMask = 4;
 int pinDiff = 3;
 int ledState = LOW;
-// learning VS CODE
+// change from poojan
 
 // ==== Digital Pins =====
 const int buzzerPin = 5;
