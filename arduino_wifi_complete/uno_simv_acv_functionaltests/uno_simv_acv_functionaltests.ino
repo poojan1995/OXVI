@@ -7,6 +7,7 @@
 #include <Nextion.h>
 #include <SPI.h>
 #include <SD.h>
+#include<Arduino.h>
 
 //====== Serial Connection with NODEMCU =====
 SoftwareSerial SUART(2, 3); //SRX=Dpin-2; STX-DPin-3
@@ -22,7 +23,7 @@ int potpinBPM = 2;
 int pinMask = 4;
 int pinDiff = 3;
 int ledState = LOW;
-
+// learning VS CODE
 
 // ==== Digital Pins =====
 const int buzzerPin = 5;
