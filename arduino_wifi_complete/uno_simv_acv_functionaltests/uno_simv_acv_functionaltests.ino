@@ -61,11 +61,6 @@ float totVolume = 0;
 String acvLabel = "acv";
 String simvLabel = "simv";
 
-
-// ======= Mode changing vars =========
-uint32_t lastPrint = millis();
-
-// Declare your Nextion objects - Example (page id = 0, component id = 1, component name = "b0")
 //====== LCD Variables ==============
 int start = 0;
 int id_1 = 4;
@@ -94,10 +89,6 @@ NexButton NoModeButton = NexButton(0, 10, "NoModeButton");
 NexButton startButton = NexButton(0, 11, "startButton");
 NexButton stopButton = NexButton(1, 1, "stopButton");
 NexTouch *nex_listen_list[] = {&SIMVButton, &ACVButton, &PSVButton, &NoModeButton, &startButton, &stopButton, NULL};
-
-
-
-
 
 //======= SD Card File ===========
 File myFile;
@@ -237,22 +228,16 @@ void simv_mode()
       // === minute ventilation ===
       minuteVentilation = minuteVentilation/(millis()-startTime)*1000*60;
 
-      // === % of breaths initiated ===
-      breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
-      breathsInitiated = 0;
-      seperationBreaths = 0;
-      
       // record minuteVentilation and breathPercent in sd card and wifi
       minuteVentilation = 0;
       startTime = millis();
-      }
+    }
 
-      maskPressure = pressureFromAnalog(pinMask,1000);
-      diffPressure = pressureFromAnalog(pinDiff,1000); 
-      //Serial.println(diffPressure);
-      send_to_screen_values();
-      send_to_screen_graph();
-      nexLoop(nex_listen_list); 
+    // === % of breaths initiated ===
+    breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
+    //Serial.println(diffPressure);
+    send_to_screen_values();
+    nexLoop(nex_listen_list); 
 
   }
   return;
@@ -315,15 +300,14 @@ void acv_mode()
       // record minuteVentilation and breathPercent in sd card and wifi
       minuteVentilation = 0;
       startTime = millis();
-      }
+    }
 
-      // === % of breaths initiated ===
-      breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
-      maskPressure = pressureFromAnalog(pinMask,1000);
-      diffPressure = pressureFromAnalog(pinDiff,1000); 
-      //send_to_screen_values();
-      //send_to_screen_graph();
-      //nexLoop(nex_listen_list); 
+    // === % of breaths initiated ===
+    breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
+    maskPressure = pressureFromAnalog(pinMask,1000);
+    diffPressure = pressureFromAnalog(pinDiff,1000); 
+    send_to_screen_values();
+    nexLoop(nex_listen_list); 
   }
   return;
 }
