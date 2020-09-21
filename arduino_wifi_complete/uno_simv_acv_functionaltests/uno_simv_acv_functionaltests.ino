@@ -20,10 +20,9 @@ float pos = 0;
 int potpinIE_ratio = 0;
 int potpinTidVol = 1;
 int potpinBPM = 2;
-int pinMask = 4;
-int pinDiff = 3;
+int pinMask = 5;
+int pinDiff = 4;
 int ledState = LOW;
-// change from poojan
 
 // ==== Digital Pins =====
 const int buzzerPin = 5;
@@ -35,8 +34,10 @@ float slopePressureMask = 204.8;
 float constPressureDiff = 512 + 23;
 float slopePressureDiff = 204.8;
 
-// ===== Other vars ======
+//  Other vars 
 float IE_ratio;
+float insTime;
+float expTime;
 float TidVol;
 float BPM;
 float separation;
@@ -50,6 +51,8 @@ float area_1 = 0.0002835287370;
 float area_2 = 0.00007853981634;
 float rho = 1.225;
 float timeNow;
+
+// Monitored Parameters 
 float peakPressure = 0;
 float peakFlow = 0;
 float minuteVentilation = 0;
@@ -60,7 +63,6 @@ String simvLabel = "simv";
 
 
 // ======= Mode changing vars =========
-int state = HIGH;
 uint32_t lastPrint = millis();
 
 // Declare your Nextion objects - Example (page id = 0, component id = 1, component name = "b0")
@@ -93,51 +95,16 @@ NexButton startButton = NexButton(0, 11, "startButton");
 NexButton stopButton = NexButton(1, 1, "stopButton");
 NexTouch *nex_listen_list[] = {&SIMVButton, &ACVButton, &PSVButton, &NoModeButton, &startButton, &stopButton, NULL};
 
-/* NexText t_mode = NexText(0, 9, "t_mode");
-  NexButton b0 = NexButton(0, 2, "b0");
-  NexButton b1 = NexButton(0, 3, "b1");
-  NexButton b2 = NexButton(0, 4, "b2");
-  NexText t3 = NexText(1, 5, "t3");
-  NexText t4 = NexText(1, 6, "t4");
-  NexText t5 = NexText(1, 7, "t5");
-  NexText t_ie_ratio = NexText(0, 10, "t_ie_Ratio");
-  NexText t_bpm = NexText(0, 11, "t_bpm");
-  NexText t_tidvol = NexText(0, 12, "t_tidvol");
-  String set_mode;
-  NexTouch *nex_listen_list[] = {&b0,&b1,&b2,NULL}; */
 
 
-void SIMVButtonPopCallback(void *ptr) {
-  set_mode = "SIMV";
-  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
-}
 
-void ACVButtonPopCallback(void *ptr) {
-  set_mode = "ACV";
-  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
-}
-void PSVButtonPopCallback(void *ptr) {
-  set_mode = "PSV";
-  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
-}
-void NoModeButtonPopCallback(void *ptr) {
-  set_mode = "NoMode";
-  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
-}
-void startButtonPopCallback(void *ptr) {
-  start = 1;
-
-}
-void stopButtonPopCallback(void *ptr) {
-  start = 0;
-}
 
 //======= SD Card File ===========
 File myFile;
 
 void setup()
 {
-  servo.attach(9);
+  servo.attach(6);
   Serial.begin(9600);
   SUART.begin(9600);
   pinMode(ledPin, OUTPUT);
@@ -159,13 +126,7 @@ void setup()
   /* myFile = SD.open("example.txt", FILE_WRITE);
     myFile.close(); */
 }
-void writeString(String stringData) {
-  //Function to send commands to the Nextion display.
-  for (int i = 0; i < stringData.length(); i++) {
-    Serial.write(stringData[i]);
-  }
-  Serial.write(0xff); Serial.write(0xff); Serial.write(0xff);
-}
+
 //////////////////
 ////// Loop //////
 //////////////////
@@ -183,10 +144,12 @@ nexLoop(nex_listen_list);
 //{
 //  simv_mode();    
 //}
-if(set_mode == "ACV" && start == 1)
-{
-  acv_mode_photoshoot();    
-}
+//if(set_mode == "ACV" && start == 1)
+//{
+start = 1;
+  
+acv_mode();    
+//}
 
 
     //acv_mode();
@@ -238,9 +201,9 @@ void simv_mode()
     // ==== Initiate the cycle =====
     if (firstRun)
     {
-      inspiration(TidVol);
+      cycleEndTime = inspiration(TidVol);
       delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      expiration(TidVol, IE_ratio);
       firstRun = false;
       startTime = millis();
       
@@ -248,23 +211,23 @@ void simv_mode()
 
     // ========= Triggered Breaths =============
 
-    if (maskPressure < -1)
+    if (maskPressure < -2)
     { 
       breathsInitiated = breathsInitiated + 1;
-      inspiration(TidVol);
+      cycleEndTime = inspiration(TidVol);
       minuteVentilation += totVolume;
       delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      expiration(TidVol, IE_ratio);
     }
    
     // ========= Seperation Breaths =============
    
     if (millis() - cycleEndTime >= (uint32_t)separation)
     {
-      inspiration(TidVol);
+      cycleEndTime = inspiration(TidVol);
       minuteVentilation += totVolume;
       delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      expiration(TidVol, IE_ratio);
       seperationBreaths = seperationBreaths + 1;
     }
   
@@ -286,7 +249,7 @@ void simv_mode()
 
       maskPressure = pressureFromAnalog(pinMask,1000);
       diffPressure = pressureFromAnalog(pinDiff,1000); 
-      Serial.println(diffPressure);
+      //Serial.println(diffPressure);
       send_to_screen_values();
       send_to_screen_graph();
       nexLoop(nex_listen_list); 
@@ -296,17 +259,17 @@ void simv_mode()
 }
 
 
-
 // ===========================================
 //            ACV MODE Function
 // ===========================================
-
 void acv_mode()
 {
   uint32_t cycleEndTime;
+  uint32_t startTime;
   bool firstRun = true;
-
-
+  int breathsInitiated = 0;
+  int seperationBreaths = 0;
+  float breathPercent; 
   while(start == 1)
   {
     // Fetch all potentiometer values
@@ -316,61 +279,51 @@ void acv_mode()
     // ==== Initiate the cycle =====
     if (firstRun)
     {
-      inspiration(TidVol);
-      delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      cycleEndTime = inspiration(TidVol);
+      delay(500);
+      expiration(TidVol, IE_ratio);
       firstRun = false;
+      startTime = millis();
     }
-    // ========= Identify trigger and initiate the cycle =============
-    if (millis() - cycleEndTime >= (uint32_t)separation || maskPressure < -1)
+    // ========= Regular Breaths =============
+    if (millis() - cycleEndTime >= expTime)
+    { 
+      cycleEndTime = inspiration(TidVol);
+      delay(500);
+      expiration(TidVol, IE_ratio);
+      minuteVentilation += totVolume;
+      seperationBreaths = seperationBreaths + 1;
+
+    }
+    
+    // ========= Triggered Breaths =============
+    if (maskPressure < -2)
     {
-      inspiration(TidVol);
-      delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
+      cycleEndTime = inspiration(TidVol);
+      delay(500);
+      expiration(TidVol, IE_ratio);
+      breathsInitiated = breathsInitiated + 1;
+      minuteVentilation += totVolume;
     }
 
+    // ======= Analytics Record every minute ==========
+    if((millis() - startTime)*1000 >= 60)
+    {
+      // === minute ventilation ===
+      minuteVentilation = minuteVentilation/(millis()-startTime)*1000*60;
+      
+      // record minuteVentilation and breathPercent in sd card and wifi
+      minuteVentilation = 0;
+      startTime = millis();
+      }
+
+      // === % of breaths initiated ===
+      breathPercent = (breathsInitiated/(breathsInitiated+seperationBreaths))*100;
       maskPressure = pressureFromAnalog(pinMask,1000);
       diffPressure = pressureFromAnalog(pinDiff,1000); 
       //send_to_screen_values();
       //send_to_screen_graph();
-      nexLoop(nex_listen_list); 
-  }
-  return;
-}
-
-void acv_mode_photoshoot()
-{
-  uint32_t cycleEndTime;
-  bool firstRun = true;
-
-
-  while(start == 1)
-  {
-    // Fetch all potentiometer values
-    fetchPotValues();
-    diffSensnorCalibration();
-
-    // ==== Initiate the cycle =====
-    if (firstRun)
-    {
-      inspiration(TidVol);
-      delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
-      firstRun = false;
-    }
-    // ========= Identify trigger and initiate the cycle =============
-    if (millis() - cycleEndTime >= (uint32_t)separation || maskPressure < -1)
-    {
-      inspiration(TidVol);
-      delay(15);
-      cycleEndTime = expiration(TidVol, IE_ratio);
-    }
-
-      maskPressure = pressureFromAnalog(pinMask,1000);
-      diffPressure = pressureFromAnalog(pinDiff,1000); 
-      //send_to_screen_values();
-      //send_to_screen_graph();
-      nexLoop(nex_listen_list); 
+      //nexLoop(nex_listen_list); 
   }
   return;
 }
@@ -397,16 +350,24 @@ float average_maskPressure()
 // Inspiration Function
 // =======================
  
-void inspiration(float TidVol)
+uint32_t inspiration(float TidVol)
 { int count = 0;
   timeNow = millis();
-  totVolume= 0;
-  for (pos = 0; pos <= TidVol; pos += 2) // goes from 0 degrees to 180 degrees
+  totVolume = 0;
+  peakPressure = 0;
+  peakFlow = 0;
+  float posInc = 0;
+  uint32_t recTime = millis();
+
+  if (insTime>2500){ posInc = (insTime/2500)*TidVol/750;} //linear
+  else { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/750;} 
+  Serial.println(insTime);
+  Serial.println(posInc);
+  for (pos = 0; pos <= TidVol/5.75; pos += posInc) // goes from 0 degrees to 180 degrees
   { // in steps of 1 degree
 
     servo.write(pos);
-    delay(10);
-
+    delay(0);
     // ============ Update pressure values =========
     maskPressure = pressureFromAnalog(pinMask, count);
     diffPressure = pressureFromAnalog(pinDiff, count);
@@ -414,47 +375,32 @@ void inspiration(float TidVol)
     //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
     //myFile.println(data);
-    //nexLoop(nex_listen_list);
-    //send_to_screen_values();
-    //nexLoop(nex_listen_list); 
     send_to_screen_graph();
-    
     count++;
     // === Calculating Peak inspiratory pressure====
     if (peakPressure < maskPressure) peakPressure = maskPressure;
     // === Calculating Peak inspiratory flow====
     if (peakFlow < volFlow) peakFlow = volFlow;  
   }
+  recTime = millis() - recTime;
+  Serial.println(recTime);
   cycleVolume = totVolume;
-  return;
+  return millis();
 }
 
 // =====================
 // Expiration Function
 // =====================
 
-uint32_t expiration(float TidVol, float IE_ratio)
+void expiration(float TidVol, float IE_ratio)
  {
-  int count = 0;
-  totVolume = 0;
   timeNow = millis();
-  for (int pos = TidVol; pos >= 2; pos -= 0.5) // goes from 180 degrees to 0 degrees
+  for (int pos = TidVol/5.75; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
   {
-    servo.write(pos - 1.5);
-    delay(1000 * IE_ratio / TidVol);
-    // ============ Update pressure values =========
-    maskPressure = pressureFromAnalog(pinMask, count);
-    diffPressure = pressureFromAnalog(pinDiff, count);
-    //computePrintVolFlow();
-    //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
-    //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
-    //myFile.println(data);
-    //send_to_screen_values();
-    //nexLoop(nex_listen_list);
-    send_to_screen_graph();
-    count++;
+    servo.write(pos);
+    delay(7);
   }
-  return millis();
+  return;
 }
 
 // ======================================================
@@ -463,16 +409,12 @@ uint32_t expiration(float TidVol, float IE_ratio)
 void fetchPotValues()
 {
   // Fetch all potentiometer values
-  IE_ratio = map(analogRead(potpinIE_ratio), 0, 1023, 1.00, 4.00);
-  TidVol = map(analogRead(potpinTidVol), 0, 1023, 40.00, 160.00);
+  IE_ratio = map(analogRead(potpinIE_ratio), 0, 1023, 1.00, 3.00);
+  TidVol = map(analogRead(potpinTidVol), 0, 1023, 300.00, 750.00);
   BPM = map(analogRead(potpinBPM), 0, 1023, 8.00, 30.00);
-  separation = 1000 * (60 / BPM - (1 + IE_ratio)); // convert to milliseconds
-  // Correct separation time if needed
-  if (separation < 0)
-  {
-    IE_ratio = 60 / BPM - 1;
-    separation = (60 / BPM - (1 + IE_ratio)) * 1000;
-  }
+  insTime = (1/(1+IE_ratio))*(60/BPM)*1000;
+  expTime = (IE_ratio/(1+IE_ratio))*(60/BPM)*1000;
+
 }
 
 
@@ -484,7 +426,6 @@ void fetchPotValues()
 void diffSensnorCalibration()
 
 { 
-  
   diffPressure = pressureFromAnalog(pinDiff,1000); 
 
   while(diffPressure < -10 || diffPressure > 10)
@@ -507,6 +448,7 @@ float pressureFromAnalog(int pin, int count)
   if (pin == pinDiff)
   {
     pressure = (pressure - constPressureDiff) * 1000 / slopePressureDiff;
+    if(pressure>-10 && pressure < 10) pressure = 0;
     if (count != 1000) {
       diffPressureArr[count] = pressure;
     }
@@ -586,57 +528,37 @@ void buzzAlarm(bool turnOn)
 void computePrintVolFlow()
 {
   volFlow =  1000 * sqrt((abs(diffPressure) * 2 * rho) / ((1 / (pow(area_2, 2))) - (1 / (pow(area_1, 2))))) / rho;
-  if (millis() - lastPrint >= uint32_t(100))
-  {
-    //Serial.println(flow);
-    lastPrint = millis();
-  }
-  if (volFlow > 0.4)totVolume = totVolume + volFlow * (millis() - timeNow);
+  totVolume = totVolume + volFlow * (millis() - timeNow);
   timeNow = millis();
-  //Serial.println(maskPressure);
+  //Serial.println(diffPressure);
 }
 // =======================
 // Nextion Screen Functions
 // =======================
-/* void b0PopCallback(void *ptr) {
-  set_mode = "MODE : ACV";
-  t_mode.setText(set_mode.c_str());
-  }
+void SIMVButtonPopCallback(void *ptr) {
+  set_mode = "SIMV";
+  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
+}
 
-  void b1PopCallback(void *ptr) {
-  set_mode = "MODE : SIMV";
-  t_mode.setText(set_mode.c_str());
-  }
+void ACVButtonPopCallback(void *ptr) {
+  set_mode = "ACV";
+  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
+}
+void PSVButtonPopCallback(void *ptr) {
+  set_mode = "PSV";
+  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
+}
+void NoModeButtonPopCallback(void *ptr) {
+  set_mode = "NoMode";
+  String data = "page0.t_mode.txt=\"" + set_mode  + "\""; writeString(data);
+}
+void startButtonPopCallback(void *ptr) {
+  start = 1;
 
-  void b2PopCallback(void *ptr) {
-  set_mode = "MODE : None";
-  t_mode.setText(set_mode.c_str());
-  } */
-
-// =====================
-// Print to Screen
-// =====================
-/* void print_to_screen()
-  {
-  t_mode.setText(set_mode.c_str());
-  static char ps_diff[6];
-  dtostrf(diffPressure, 6, 2, ps_diff);
-  static char ps_mask[6];
-  dtostrf(maskPressure, 6, 2, ps_mask);
-  t3.setText(ps_diff);
-  t5.setText(ps_mask);
-  static char ie_ratio[6];
-  dtostrf(IE_ratio, 6, 2, ie_ratio);
-  t_ie_ratio.setText(ie_ratio);
-  static char bpm[6];
-  dtostrf(BPM, 6, 2, bpm);
-  t_bpm.setText(bpm);
-  static char tidvol[6];
-  dtostrf(TidVol, 6, 2, tidvol);
-  t_tidvol.setText(tidvol);
-
-
-  } */
+}
+void stopButtonPopCallback(void *ptr) {
+  start = 0;
+}
 
 
 // =====================
@@ -668,60 +590,36 @@ void transmit() {
 }
 
 
-// =====================
-// Print to Screen
-// =====================
-float i = 0;
-float j;
-float val1;
-float val2;
-float val3;
+// ==========================
+// Print to Screen Functions
+// ==========================
 void send_to_screen_graph() {
-  i= i + 0.05;
-  if(i>6.28) i = 0;
-  if (i > 2 && i <4.5)
-    {
-      val1 = 40 + 5*i + random(-2,2);
-      val3 = 70 - 7*i + random(-2,2);
-    }
-  if (i >=4.5 && i <5)
-  {
-    val3 =  5 + 4*i + random(-2,2);
-  }
-    if (i<=2 || i>=5)
-    {
-      val1 = 15 + random(-2,2);
-      val3 = 32 + random(-4,2);
-    }
-  if (i < 3.14)
-  {val2 = sin(i/2);}
-  else {val2 = (sin((3.14+i)/2)+1);}
     
-  String to_send_p_mask = ad + id_1 + "," + ch + "," + int(val1);
-  //Serial.println(val2);
+  String to_send_p_mask = ad + id_1 + "," + ch + "," + 20;
+  //Serial.println(int(map(maskPressure, -10,24,0,80)));
   print_screen(to_send_p_mask);
-  String to_send_volFlow = ad + id_2 + "," + ch + "," + int(40*(val2+0.5) + random(-1.1,1.1));
+  String to_send_volFlow = ad + id_2 + "," + ch + "," + int(map(volFlow*100, -10,150,0.0,80.0));
   print_screen(to_send_volFlow);
-  String to_send_totVolume = ad + id_3 + "," + ch + "," + int(val3);
+  String to_send_totVolume = ad + id_3 + "," + ch + "," + int(map(totVolume, 0,800,0,80));
   print_screen(to_send_totVolume);
 }
 
 void send_to_screen_values() {
-  //dtostrf(BPM, 6, 2, buffer_1);
-  String data = "page0.t_BPM.txt=\"" + String(BPM)  + "\""; writeString(data);
-  //BPMText_Page1.setText(buffer);
-  //dtostrf(IE_ratio, 6, 2, buffer_2);
+  String data = "page0.t_bpm.txt=\"" + String(BPM)  + "\""; writeString(data);
   data = "page0.t_ie_ratio.txt=\"" + String(IE_ratio)  + "\""; writeString(data);
-  //IERatioText_Page1.setText(buffer);
-  //dtostrf(TidVol, 6, 2, buffer_3);
   data = "page0.t_tidvol.txt=\"" + String(TidVol)  + "\""; writeString(data);
-  //TidVolText_Page1.setText(buffer_3);
-  //t_mode.setText(set_mode.c_str());
 }
 
 void print_screen(String to_send) {
   Serial.print(to_send);
-  Serial.write(0xff);
-  Serial.write(0xff);
-  Serial.write(0xff);
+  Serial.print( "\xFF\xFF\xFF");
+
+}
+
+void writeString(String stringData) {
+  //Function to send commands to the Nextion display.
+  for (int i = 0; i < stringData.length(); i++) {
+    Serial.write(stringData[i]);
+  }
+  Serial.write(0xff); Serial.write(0xff); Serial.write(0xff);
 }
