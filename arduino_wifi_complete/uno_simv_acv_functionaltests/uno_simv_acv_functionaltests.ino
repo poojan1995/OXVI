@@ -183,10 +183,9 @@ nexLoop(nex_listen_list);
 //{
 //  simv_mode();    
 //}
-if(set_mode == "ACV" && start == 1)
-{
+
   acv_mode_photoshoot();    
-}
+
 
 
     //acv_mode();
