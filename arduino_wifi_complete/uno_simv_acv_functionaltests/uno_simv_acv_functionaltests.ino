@@ -410,9 +410,17 @@ uint32_t inspiration(float TidVol)
     maskPressure = pressureFromAnalog(pinMask, count);
     diffPressure = pressureFromAnalog(pinDiff, count);
     computePrintVolFlow();
-    //String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
+    String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
     //myFile.println(data);
+
+     myFile = SD.open("test.txt", FILE_WRITE);
+      if (myFile)
+     {
+       myFile.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
+     }
+     myFile.close();
+     
     send_to_screen_graph();
     count++;
     // === Calculating Peak inspiratory pressure====
