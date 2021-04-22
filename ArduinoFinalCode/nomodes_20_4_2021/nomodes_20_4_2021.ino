@@ -20,8 +20,8 @@ float pos = 0;
 int potpinIE_ratio = 1;
 int potpinTidVol = 0;
 int potpinBPM = 2;
-int pinMask = 5;
-int pinDiff = 3;
+int pinMask = 4;
+int pinDiff = 5;
 int ledState = LOW;
 
 // ==== Digital Pins =====
@@ -413,7 +413,19 @@ float calcSD(float data[])
 // ===============
 // Calculate mean
 // ===============
+float meanP(float arrayP[])
+{
+  float avg = 0.0
+  int length = sizeof(arrayP);
 
+  for (int i = 0; i < length; i++)
+  {
+    avg += arrayP[i];
+  }
+  avg = avg / length;
+
+  return avg;
+}
 
 // ================================================================
 // Buzz Alarm if there is a problem; stop alarm if problem resolved
@@ -475,7 +487,7 @@ void send_to_screen_values() {
   data = "page0.t_ieratio.txt=\"" + String(int(IE_ratio))  + "\""; writeString(data);
   data = "page0.t_tidvol.txt=\"" + String(int(TidVol))  + "\""; writeString(data);
   data = "page1.t_peakPressure.txt=\"" + String(peakPressure)  + "\""; writeString(data);
-  data = "page1.t_meanPressure.txt=\"" + String(cycleVolume)  + "\""; writeString(data);
+  data = "page1.t_meanPressure.txt=\"" + String(meanP(maskPressureArr))  + "\""; writeString(data);
   data = "page1.t_triggers.txt=\"" + String(breathPercent)  + "\""; writeString(data);
 }
 
