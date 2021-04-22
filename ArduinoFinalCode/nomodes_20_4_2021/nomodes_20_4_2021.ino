@@ -113,6 +113,7 @@ void setup()
 void loop()
 {
 
+buzzAlarm(true);
 fetchPotValues();
 send_to_screen_values();
 delay(500);
@@ -121,7 +122,8 @@ if(start == 1)
 {
   acv_mode();    
 }
-
+buzzAlarm(false);
+delay(500);
 
 //Serial.println(set_mode);
 
@@ -287,6 +289,9 @@ uint32_t inspiration(float TidVol)
   }
   recTime = millis() - recTime;
   cycleVolume = totVolume;
+
+  // Buzzer Sanity Check
+  sanityCheckBuzzer;
   return millis();
 }
 
