@@ -85,7 +85,7 @@ File myFile;
 
 void setup()
 {
-  servo.attach(6);
+  servo.attach(9);
   Serial.begin(9600);
   SUART.begin(9600);
   pinMode(ledPin, OUTPUT);
