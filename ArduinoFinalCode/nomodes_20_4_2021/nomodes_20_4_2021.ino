@@ -256,11 +256,11 @@ uint32_t inspiration(float TidVol)
   float posInc = 0;
   uint32_t recTime = millis();
 
-  if (insTime>2500){ posInc = (insTime/2500)*TidVol/100;} //linear
-  else { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/100;} 
+  if (insTime>2500){ posInc = (insTime/2500)*TidVol/750;} //linear
+  else { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/750;} 
   //Serial.println(insTime);
   //Serial.println(posInc);
-  for (pos = 0; pos <= (75/80)*TidVol + 26.25; pos += posInc) // goes from 0 degrees to 180 degrees
+  for (pos = 0; pos <= TidVol/6.5; pos += posInc) // goes from 0 degrees to 180 degrees
   { // in steps of 1 degree
 
     servo.write(pos);
@@ -302,7 +302,7 @@ uint32_t inspiration(float TidVol)
 void expiration(float TidVol, float IE_ratio)
  {
   timeNow = millis();
-  for (int pos = (75/80)*TidVol + 26.25; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
+  for (int pos = TidVol/6.5; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
   {
     servo.write(pos);
     delay(0);
@@ -317,7 +317,7 @@ void fetchPotValues()
 {
   // Fetch all potentiometer values
   IE_ratio = map(analogRead(potpinIE_ratio), 0, 1023, 3.00, 1.00);
-  TidVol = map(analogRead(potpinTidVol), 0, 1023, 100.00, 20.00);
+  TidVol = map(analogRead(potpinTidVol), 0, 1023, 750.00, 300.00);
   BPM = map(analogRead(potpinBPM), 0, 1023, 30.00, 13.00);
   insTime = (1/(1+IE_ratio))*(60/BPM)*1000;
   expTime = (IE_ratio/(1+IE_ratio))*(60/BPM)*1000;
@@ -470,7 +470,7 @@ String data;
 void send_to_screen_values() {
   data = "page0.t_bpm.txt=\"" + String(int(BPM))  + "\""; writeString(data);
   data = "page0.t_ieratio.txt=\"" + String(int(IE_ratio))  + "\""; writeString(data);
-  data = "page0.t_tidvol.txt=\"" + String(int(TidVol))  + "\""; writeString(data);
+  data = "page0.t_tidvol.txt=\"" + String(int(0.178*TidVol - 33.33))  + "\""; writeString(data);
   data = "page1.t_peakPressure.txt=\"" + String(int(peakPressure))  + "\""; writeString(data);
   data = "page1.t_meanPressure.txt=\"" + String(int(meanAirwayPressure))  + "\""; writeString(data);
   data = "page1.t_triggers.txt=\"" + String(int(breathPercent))  + "\""; writeString(data);
