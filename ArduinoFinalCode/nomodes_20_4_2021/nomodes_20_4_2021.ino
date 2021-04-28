@@ -194,7 +194,7 @@ void acv_mode()
     }
     
     // ========= Triggered Breaths =============
-    if (maskPressure < -1)
+    if (maskPressure < -1)           // maskPressure value comes from where? it is not declared initially so it should come from somewhere
     {
       cycleEndTime = inspiration(TidVol);
       delay(500);
@@ -247,7 +247,8 @@ float average_maskPressure()
 // =======================
  
 uint32_t inspiration(float TidVol)
-{ int count = 0;
+{
+  int count = 0;
   timeNow = millis();
   totVolume = 0;
   peakPressure = 0;
@@ -255,12 +256,17 @@ uint32_t inspiration(float TidVol)
   float posInc = 0;
   uint32_t recTime = millis();
 
-  if (insTime>2500){ posInc = (insTime/2500)*TidVol/750;} //linear
-  else { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/750;} 
+  if (insTime>2500)
+      { posInc = (insTime/2500)*TidVol/750;} //linear
+  else 
+      { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/750;} 
+  
   //Serial.println(insTime);
   //Serial.println(posInc);
+  
   for (pos = 0; pos <= TidVol/6.5; pos += posInc) // goes from 0 degrees to 180 degrees
-  { // in steps of 1 degree
+  { 
+    // in steps of 1 degree
 
     servo.write(pos);
     delay(0);
@@ -415,7 +421,7 @@ float calcSD(float data[])
 // ===============
 float meanP(float arrayP[])
 {
-  float avg = 0.0
+  float avg = 0.0;
   int length = sizeof(arrayP);
 
   for (int i = 0; i < length; i++)
