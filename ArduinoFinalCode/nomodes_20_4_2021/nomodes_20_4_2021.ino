@@ -44,6 +44,7 @@ float separation;
 float sensorvalue;
 float maskPressure;
 float diffPressure;
+float meanAirwayPressure = 0.0;
 float volFlow;
 float diffPressureArr[90];
 float maskPressureArr[90];
@@ -113,7 +114,6 @@ void setup()
 void loop()
 {
 
-buzzAlarm(true);
 fetchPotValues();
 send_to_screen_values();
 delay(500);
@@ -122,8 +122,7 @@ if(start == 1)
 {
   acv_mode();    
 }
-buzzAlarm(false);
-delay(500);
+
 
 //Serial.println(set_mode);
 
@@ -194,7 +193,7 @@ void acv_mode()
     }
     
     // ========= Triggered Breaths =============
-    if (maskPressure < -1)           // maskPressure value comes from where? it is not declared initially so it should come from somewhere
+    if (maskPressure < -1)
     {
       cycleEndTime = inspiration(TidVol);
       delay(500);
@@ -220,6 +219,7 @@ void acv_mode()
     diffPressure = pressureFromAnalog(pinDiff,1000); 
     send_to_screen_values();
     nexLoop(nex_listen_list); 
+    sanityCheckBuzzer();
   }
   return;
 }
@@ -247,32 +247,28 @@ float average_maskPressure()
 // =======================
  
 uint32_t inspiration(float TidVol)
-{
-  int count = 0;
+{ int count = 0;
   timeNow = millis();
   totVolume = 0;
   peakPressure = 0;
   peakFlow = 0;
+  meanAirwayPressure = 0;
   float posInc = 0;
   uint32_t recTime = millis();
 
-  if (insTime>2500)
-      { posInc = (insTime/2500)*TidVol/750;} //linear
-  else 
-      { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/750;} 
-  
+  if (insTime>2500){ posInc = (insTime/2500)*TidVol/100;} //linear
+  else { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/100;} 
   //Serial.println(insTime);
   //Serial.println(posInc);
-  
-  for (pos = 0; pos <= TidVol/6.5; pos += posInc) // goes from 0 degrees to 180 degrees
-  { 
-    // in steps of 1 degree
+  for (pos = 0; pos <= (75/80)*TidVol + 26.25; pos += posInc) // goes from 0 degrees to 180 degrees
+  { // in steps of 1 degree
 
     servo.write(pos);
     delay(0);
     // ============ Update pressure values =========
     maskPressure = pressureFromAnalog(pinMask, count);
     diffPressure = pressureFromAnalog(pinDiff, count);
+    meanAirwayPressure = meanAirwayPressure + maskPressure;
     computePrintVolFlow();
     String data = set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";";
     //Serial.println(set_mode + "," + String(maskPressure) + "," + String(volFlow) + "," + String(totVolume) + ";");
@@ -295,9 +291,7 @@ uint32_t inspiration(float TidVol)
   }
   recTime = millis() - recTime;
   cycleVolume = totVolume;
-
-  // Buzzer Sanity Check
-  sanityCheckBuzzer;
+  meanAirwayPressure = meanAirwayPressure/count;
   return millis();
 }
 
@@ -308,7 +302,7 @@ uint32_t inspiration(float TidVol)
 void expiration(float TidVol, float IE_ratio)
  {
   timeNow = millis();
-  for (int pos = TidVol/6.5; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
+  for (int pos = (75/80)*TidVol + 26.25; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
   {
     servo.write(pos);
     delay(0);
@@ -323,7 +317,7 @@ void fetchPotValues()
 {
   // Fetch all potentiometer values
   IE_ratio = map(analogRead(potpinIE_ratio), 0, 1023, 3.00, 1.00);
-  TidVol = map(analogRead(potpinTidVol), 0, 1023, 750.00, 300.00);
+  TidVol = map(analogRead(potpinTidVol), 0, 1023, 100.00, 20.00);
   BPM = map(analogRead(potpinBPM), 0, 1023, 30.00, 13.00);
   insTime = (1/(1+IE_ratio))*(60/BPM)*1000;
   expTime = (IE_ratio/(1+IE_ratio))*(60/BPM)*1000;
@@ -385,12 +379,10 @@ float pressureFromAnalog(int pin, int count)
 
 void sanityCheckBuzzer()
 {
-  float SDPressure;
-  SDPressure = calcSD(maskPressureArr);
   //Serial.println(SDPressure);
   //Serial.println(SDPressure);
-  if (SDPressure < 0.01) buzzAlarm(true);
-  if (SDPressure >= 0.01) buzzAlarm(false);
+  if (meanAirwayPressure < 2 || peakPressure > 23) buzzAlarm(true);
+  if (meanAirwayPressure >= 2 && peakPressure < 23) buzzAlarm(false);
 }
 
 // ================= LAYER 4 FUNCTIONS =============
@@ -419,19 +411,7 @@ float calcSD(float data[])
 // ===============
 // Calculate mean
 // ===============
-float meanP(float arrayP[])
-{
-  float avg = 0.0;
-  int length = sizeof(arrayP);
 
-  for (int i = 0; i < length; i++)
-  {
-    avg += arrayP[i];
-  }
-  avg = avg / length;
-
-  return avg;
-}
 
 // ================================================================
 // Buzz Alarm if there is a problem; stop alarm if problem resolved
@@ -488,13 +468,12 @@ void send_to_screen_graph() {
 }
 String data;
 void send_to_screen_values() {
-  data = "page0.t_mode.txt=\"" + String(set_mode)  + "\""; writeString(data);
   data = "page0.t_bpm.txt=\"" + String(int(BPM))  + "\""; writeString(data);
   data = "page0.t_ieratio.txt=\"" + String(int(IE_ratio))  + "\""; writeString(data);
   data = "page0.t_tidvol.txt=\"" + String(int(TidVol))  + "\""; writeString(data);
-  data = "page1.t_peakPressure.txt=\"" + String(peakPressure)  + "\""; writeString(data);
-  data = "page1.t_meanPressure.txt=\"" + String(meanP(maskPressureArr))  + "\""; writeString(data);
-  data = "page1.t_triggers.txt=\"" + String(breathPercent)  + "\""; writeString(data);
+  data = "page1.t_peakPressure.txt=\"" + String(int(peakPressure))  + "\""; writeString(data);
+  data = "page1.t_meanPressure.txt=\"" + String(int(meanAirwayPressure))  + "\""; writeString(data);
+  data = "page1.t_triggers.txt=\"" + String(int(breathPercent))  + "\""; writeString(data);
 }
 
 void print_screen(String to_send) {
