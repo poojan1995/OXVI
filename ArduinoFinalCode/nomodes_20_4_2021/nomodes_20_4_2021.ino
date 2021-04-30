@@ -25,7 +25,7 @@ int pinDiff = 5;
 int ledState = LOW;
 
 // ==== Digital Pins =====
-const int buzzerPin = 5;
+const int buzzerPin = 8;
 const int ledPin = 6;
 
 // ==== Sensor Offset =====
@@ -86,7 +86,7 @@ File myFile;
 
 void setup()
 {
-  servo.attach(9);
+  servo.attach(6);
   Serial.begin(9600);
   SUART.begin(9600);
   pinMode(ledPin, OUTPUT);
@@ -178,7 +178,7 @@ void acv_mode()
     {
       cycleEndTime = inspiration(TidVol);
       sanityCheckBuzzer();
-      delay(500);
+      delay(1200);
       expiration(TidVol, IE_ratio);
       firstRun = false;
       startTime = millis();
@@ -190,7 +190,7 @@ void acv_mode()
       sendToScreenAlarm(" ");
       cycleEndTime = inspiration(TidVol);
       sanityCheckBuzzer();
-      delay(500);
+      delay(1200);
       expiration(TidVol, IE_ratio);
       minuteVentilation += totVolume;
       seperationBreaths = seperationBreaths + 1;
@@ -203,7 +203,7 @@ void acv_mode()
       sendToScreenAlarm(" ");
       cycleEndTime = inspiration(TidVol);
       sanityCheckBuzzer();
-      delay(500);
+      delay(1200);
       expiration(TidVol, IE_ratio);
       breathsInitiated = breathsInitiated + 1;
       minuteVentilation += totVolume;
@@ -268,7 +268,7 @@ uint32_t inspiration(float TidVol)
   else { posInc = (19.62517 - 0.02755329*insTime + 0.00001542717*pow(insTime,2) - 2.891608e-9*pow(insTime,3))*TidVol/750;} 
   //Serial.println(insTime);
   //Serial.println(posInc);
-  for (pos = 0; pos <= TidVol/6.5; pos += posInc) // goes from 0 degrees to 180 degrees
+  for (pos = 0; pos <= TidVol/6.0; pos += posInc) // goes from 0 degrees to 180 degrees
   { // in steps of 1 degree
 
     servo.write(pos);
@@ -310,10 +310,10 @@ uint32_t inspiration(float TidVol)
 void expiration(float TidVol, float IE_ratio)
  {
   timeNow = millis();
-  for (int pos = TidVol/6.5; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
+  for (int pos = TidVol/6.0; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
   {
     servo.write(pos);
-    delay(0);
+    delay(50);
   }
   return;
 }
