@@ -122,7 +122,7 @@ if(start == 1)
 {
   acv_mode();    
 }
-
+buzzAlarm(false);
 
 //Serial.println(set_mode);
 
@@ -177,6 +177,7 @@ void acv_mode()
     if (firstRun)
     {
       cycleEndTime = inspiration(TidVol);
+      sanityCheckBuzzer();
       delay(500);
       expiration(TidVol, IE_ratio);
       firstRun = false;
@@ -185,7 +186,10 @@ void acv_mode()
     // ========= Regular Breaths =============
     if (millis() - cycleEndTime >= expTime)
     { 
+      buzzAlarm(false);
+      sendToScreenAlarm(" ");
       cycleEndTime = inspiration(TidVol);
+      sanityCheckBuzzer();
       delay(500);
       expiration(TidVol, IE_ratio);
       minuteVentilation += totVolume;
@@ -195,7 +199,10 @@ void acv_mode()
     // ========= Triggered Breaths =============
     if (maskPressure < -1)
     {
+      buzzAlarm(false);
+      sendToScreenAlarm(" ");
       cycleEndTime = inspiration(TidVol);
+      sanityCheckBuzzer();
       delay(500);
       expiration(TidVol, IE_ratio);
       breathsInitiated = breathsInitiated + 1;
@@ -219,7 +226,8 @@ void acv_mode()
     diffPressure = pressureFromAnalog(pinDiff,1000); 
     send_to_screen_values();
     nexLoop(nex_listen_list); 
-    sanityCheckBuzzer();
+    
+    
   }
   return;
 }
@@ -381,12 +389,22 @@ void sanityCheckBuzzer()
 {
   //Serial.println(SDPressure);
   //Serial.println(SDPressure);
-  if (meanAirwayPressure < 2 || peakPressure > 23) buzzAlarm(true);
-  if (meanAirwayPressure >= 2 && peakPressure < 23) buzzAlarm(false);
+  if (meanAirwayPressure < 2) 
+  {
+    buzzAlarm(true);
+    sendToScreenAlarm("Leakage!!");
+  }
+  
+  if (meanAirwayPressure > 23) 
+  {
+    buzzAlarm(true);
+    sendToScreenAlarm("High Pressure!!");
+  }
+
 }
 
 // ================= LAYER 4 FUNCTIONS =============
-
+ 
 // =============================
 // Calculate standard deviation
 // =============================
@@ -471,9 +489,14 @@ void send_to_screen_values() {
   data = "page0.t_bpm.txt=\"" + String(int(BPM))  + "\""; writeString(data);
   data = "page0.t_ieratio.txt=\"" + String(int(IE_ratio))  + "\""; writeString(data);
   data = "page0.t_tidvol.txt=\"" + String(int(0.178*TidVol - 33.33))  + "\""; writeString(data);
-  data = "page1.t_peakPressure.txt=\"" + String(int(peakPressure))  + "\""; writeString(data);
-  data = "page1.t_meanPressure.txt=\"" + String(int(meanAirwayPressure))  + "\""; writeString(data);
+  data = "page1.t_peakPressure.txt=\"" + String((peakPressure))  + "\""; writeString(data);
+  data = "page1.t_meanPressure.txt=\"" + String((meanAirwayPressure))  + "\""; writeString(data);
   data = "page1.t_triggers.txt=\"" + String(int(breathPercent))  + "\""; writeString(data);
+}
+
+void sendToScreenAlarm(String message) {
+  data = "page0.t_buzzer.txt=\"" + message  + "\""; writeString(data);
+  data = "page1.t_buzzer.txt=\"" + message  + "\""; writeString(data);
 }
 
 void print_screen(String to_send) {
