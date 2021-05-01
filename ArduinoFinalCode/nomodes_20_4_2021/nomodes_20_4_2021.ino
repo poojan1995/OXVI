@@ -20,8 +20,8 @@ float pos = 0;
 int potpinIE_ratio = 1;
 int potpinTidVol = 0;
 int potpinBPM = 2;
-int pinMask = 4;
-int pinDiff = 5;
+int pinMask = 5;
+int pinDiff = 3;
 int ledState = LOW;
 
 // ==== Digital Pins =====
@@ -178,7 +178,7 @@ void acv_mode()
     {
       cycleEndTime = inspiration(TidVol);
       sanityCheckBuzzer();
-      delay(1200);
+      delay(800);
       expiration(TidVol, IE_ratio);
       firstRun = false;
       startTime = millis();
@@ -190,7 +190,7 @@ void acv_mode()
       sendToScreenAlarm(" ");
       cycleEndTime = inspiration(TidVol);
       sanityCheckBuzzer();
-      delay(1200);
+      delay(800);
       expiration(TidVol, IE_ratio);
       minuteVentilation += totVolume;
       seperationBreaths = seperationBreaths + 1;
@@ -203,7 +203,7 @@ void acv_mode()
       sendToScreenAlarm(" ");
       cycleEndTime = inspiration(TidVol);
       sanityCheckBuzzer();
-      delay(1200);
+      delay(800);
       expiration(TidVol, IE_ratio);
       breathsInitiated = breathsInitiated + 1;
       minuteVentilation += totVolume;
@@ -313,7 +313,7 @@ void expiration(float TidVol, float IE_ratio)
   for (int pos = TidVol/6.0; pos >= 0; pos -= 1) // goes from 180 degrees to 0 degrees
   {
     servo.write(pos);
-    delay(50);
+    delay(2);
   }
   return;
 }
